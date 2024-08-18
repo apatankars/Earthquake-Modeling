@@ -6,16 +6,30 @@ import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-# from data import Dataset
 from tqdm import tqdm
 import preprocess 
 from preprocess import jsonl_to_data
 from model_experimental import Recurrent
 import visualization
 
-# from model import TPPModel
-# nll takes in list of distributions, input to call
 def train(model, times, magnitudes, accels, start_time, end_time, sequence_length, has_accel):
+    '''
+    This function trains the model on the given data and returns the loss and the prediction
+
+    Args: 
+    model: The model to train
+    times: The times of the events
+    magnitudes: The magnitudes of the events
+    accels: The accelerations of the events
+    start_time: The start time of the events
+    end_time: The end time of the events
+    sequence_length: The length of the sequence
+    has_accel: Boolean indicating if the acceleration is being used
+
+    Returns:
+    losses: The loss of the model
+    pred: The distributions predicted by the model
+    '''
     # magnitudes: [batchsize(1) x sequence size x 1]
     # times: [batchsize(1) x sequence size + 1 x 1]
     # accels: [batchsize(1) x sequence size x 96]
@@ -33,6 +47,22 @@ def train(model, times, magnitudes, accels, start_time, end_time, sequence_lengt
     return losses, pred
 
 def validate(model, times, magnitudes, accels, start_time, end_time, sequence_length, has_accel):
+    '''
+    This function validates the model on the given data and returns the loss and the prediction
+
+    Args: model: The model to validate
+    times: The times of the events
+    magnitudes: The magnitudes of the events
+    accels: The accelerations of the events
+    start_time: The start time of the events
+    end_time: The end time of the events
+    sequence_length: The length of the sequence
+    has_accel: Boolean indicating if the acceleration is being used
+
+    Returns:
+    losses: The loss of the model
+    pred: The distributions predicted by the model
+    '''
     losses = []
     times = np.expand_dims(np.array(times).T, axis=[0,2])
     magnitudes = np.expand_dims(np.array(magnitudes).T, axis=[0,2])
@@ -43,6 +73,7 @@ def validate(model, times, magnitudes, accels, start_time, end_time, sequence_le
     return losses, pred
 
 def main():
+
     start_time, end_time = preprocess.get_year_unix_times(2018)
     epochs = 150
     model = Recurrent()
@@ -95,6 +126,15 @@ def main():
     
 
 def accuracy(model, start_time, end_time):
+    '''
+    This function calculates the accuracy of the model on the test data and returns the accuracy
+
+    Args: model: The model to validate
+    start_time: The start time of the events
+    end_time: The end time of the events
+
+    Returns: accuracy: The accuracy of the model
+    '''
     correct = 0
     total=0
     for filename in os.listdir('data/testing'):
@@ -104,15 +144,14 @@ def accuracy(model, start_time, end_time):
             losses, test_pred = validate(model, times, magnitudes, accels, start_time, end_time, len(magnitudes), has_accel=True)
             samples = test_pred.sample(1000)
             samples = tf.transpose(samples, perm=[1, 2, 0]) #1 by sequence by 1000
-            # print("Samples shape: ", samples.shape)
-            # print("time shape: ", len(times))
+
             quantiles = tfp.stats.percentile(samples, q=95, axis=-1)
-            # print("Quantiles shape: ", quantiles.shape)
+
             for i, quantile in enumerate(quantiles[0]):
-                # print("QUANTILE", quantile)
                 if quantile>times[i+1]:
                     correct+=1
                 total+=1
+    
     accuracy = correct/total
     print("Accuracy", accuracy)
     return accuracy

@@ -29,7 +29,7 @@ class Recurrent(tf.keras.Model):
                  #predict_magnitude: bool = False, # output distribution, NOT magnitude
                  hidden_size: int = 32, # hidden state size
                  num_components: int = 32, # WHAT SHOULD THIS BE ????? I THOUGHT 3 ???
-                 rnn_type: str = "LSTM", # REMOVE??
+                 rnn_type: str = "LSTM",
                  dropout_proba: float = 0.5,
                  tau_mean: float = 1.0, # mean inter-event times in data
                  mag_mean: float = 0.0, # mean earthquake magnitude in data
@@ -42,8 +42,6 @@ class Recurrent(tf.keras.Model):
 
         # set parameters
         self.input_magnitude = input_magnitude
-        #self.predict_magnitude = predict_magnitude
-        # self.num_extra_features = num_extra_features ---> REMOVED- do we need this?
         self.hidden_size = hidden_size
         self.num_components = num_components
  
@@ -59,7 +57,7 @@ class Recurrent(tf.keras.Model):
 
         # RNN input features
         self.num_time_params = 3 * self.num_components
-        self.hypernet_time = tf.keras.layers.Dense(self.num_time_params) # MIGHT NOT NEED --> used for time distribution
+        self.hypernet_time = tf.keras.layers.Dense(self.num_time_params)
         
         # RNN defining
         self.num_rnn_inputs = (
@@ -68,7 +66,6 @@ class Recurrent(tf.keras.Model):
         )
 
         # input size is num_rnn_inputs
-        # self.rnn = tf.keras.layers.GRU(units=hidden_size, return_sequences=True)
         self.rnn = tf.keras.layers.LSTM(units=hidden_size, return_sequences=True, recurrent_dropout=0.5)
         # dropout
         self.dropout = tf.keras.layers.Dropout(dropout_proba)
@@ -92,7 +89,6 @@ class Recurrent(tf.keras.Model):
         # pass features into RNN
         rnn_output = self.rnn(features, training=training)
         ## SHAPE OF OUTPUT (BATCH_SIZE, SEQUENCE_LENGTH, 32)
-        # print(f"rnn_output: {rnn_output}")
 
         context = self.dropout(rnn_output, training=training)
         # Time distribution parameters
@@ -116,9 +112,15 @@ class Recurrent(tf.keras.Model):
             )
 
     def encode_time(self, inter_times):
-        log_t = tf.math.log(tf.maximum(inter_times, 1e-15))
-        encoded_time = log_t - tf.reduce_mean(log_t, axis=1)
-        # print("ENCODED SHAPE----------------",encoded_time.shape)
+        '''
+        Encode the time intervals using the log transformation
+
+        Args: inter_times: The time intervals to encode
+
+        Returns: The encoded time intervals
+        '''
+        encoded_time = tf.math.log(tf.maximum(inter_times, 1e-15))
+        
         return encoded_time
 
     def loss_function(self, distributions, intervals, start_time, end_time):
@@ -153,6 +155,4 @@ class Recurrent(tf.keras.Model):
             print("log_surv:", log_surv)
         log_likelihood = log_likelihood + tf.reduce_sum(log_surv,-1)
         len_sequence = tf.cast(tf.shape(intervals)[1], dtype=tf.float32)
-        # print(f"log_likelihood: {log_likelihood}")
-        # print(f"loss: {-log_likelihood/(len_sequence)}")
-        return -log_likelihood/(len_sequence) # NORMALIZing THIS by number of DAYS TODO TODO TODO 
+        return -log_likelihood/(len_sequence)

@@ -98,10 +98,6 @@ def delete_within_x(filepath:str, num_secs:int):
     # Rename the second file to be the first file
     os.rename(f"delete_within_{str(num_secs)}.jsonl", f"{filepath}.jsonl")
 
-#TAKE IN WHOLE PATH AND PREPROCESS: add_total_accelaration, DataWithAccel to get all of a certain accelaration, then sort_by_time, then delete_within_x, 
-
-#This goes through a path and gets all jsonl files, creates total accelaration, and adds them to new file if accelaration is 
-#greater than accel. output doesn't include suffied
 def add_total_and_select(path:str, output:str, accel:float): 
     # Get a list of all files in the directory
     for dirpath, dirnames, filenames in os.walk(path):
